@@ -53,18 +53,31 @@ ui <- dashboardPage(
     )
   ),
   dashboardBody(
+    tags$style(".pusher.container .ui.segment .ui.stackable.container.grid {margin:0px!important;}"),
     tabItems(
       selected = 1,
       tabItem(
         tabName = "overall",
-        div(style="width:1200px",
+        div(style="width:100%",
           fluidRow(
-            div(style="display: inline-block; margin-top:20px; margin-right:20px",
-            selectInput('energyType', 'Energy Type', 
-                        choices =  c(`All` = 'all',
-                                     `Renewable`='renewable',
-                                     `Non-renewable`='nonrenewable'),
-                        multiple = FALSE),
+            div(style="display: inline-block; margin-top:25px; margin-right:20px; vertical-align:top; width:20%", valueBoxOutput('totalEnergy')),
+            div(style="display: inline-block; margin-top:25px; margin-right:20px; vertical-align:top; width:20%", valueBoxOutput('tradProp')),
+            div(style="display: inline-block; margin-top:25px; margin-right:20px; vertical-align:top; width:20%", valueBoxOutput('cleanProp')),
+            div(style="display: inline-block; margin-top:25px; margin-right:20px; vertical-align:top; width:20%", valueBoxOutput('nuclProp'))
+            ),
+          fluidRow(
+            div(style="display: inline-flex; margin-top:20px; margin-right:20px",
+              sliderInput("MaxYear",
+                          "Year",
+                          min = 2000,
+                          max = 2019,
+                          value = 2019,
+                          sep = "" ),
+              selectInput('energyType', 'Energy Type', 
+                          choices =  c(`All` = 'all',
+                                       `Renewable`='renewable',
+                                       `Non-renewable`='nonrenewable'),
+                          multiple = FALSE),
             )
           ),
           fluidRow(
@@ -88,7 +101,6 @@ ui <- dashboardPage(
         )
       )
     )
-  ), theme = "cosmo"
+  ), theme = "cosmo",
+  suppress_bootstrap = TRUE
 )
-
-

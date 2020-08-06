@@ -85,4 +85,62 @@ server <- function(input, output, session) {
       leaflet::addLegend(pal = mypalette, values = glob_area@data$Proportion, title = "Proportion of renewable energy", position = "bottomleft")
       
   })
+  
+  consump_data <- fread('./data/Raw Consumption - EJ.csv')
+
+  consumpToDate <- consump_data %>%
+    filter(Year <= 2019)
+  
+  cleanConsumpToDate <- consump_data %>%
+    filter(Year <= 2019 & Classification == "Renewable")
+  
+  TradConsumpToDate <- consump_data %>%
+    filter(Year <= 2019 & Classification == "Traditional")
+  
+  NuclConsumpToDate <- consump_data %>%
+    filter(Year <= 2019 & Classification == "Nuclear")
+  
+  output$totalEnergy <- renderInfoBox({
+    consumpToDate <- subset(consump_data, Year == input$MaxYear)
+    valueBox(value = paste0(ceiling(sum(consumpToDate$Consumption)), " EJ"), 
+             subtitle = "Global Consumption",
+             color = "yellow", icon = icon("bolt"), size = "tiny"
+    )
+  })
+  
+  output$cleanProp <- renderInfoBox({
+    consumpToDate <- subset(consump_data, Year == input$MaxYear)
+    cleanConsumpToDate <- subset(cleanConsumpToDate, Year == input$MaxYear)
+    valueBox(value = paste0(round((sum(cleanConsumpToDate$Consumption)/sum(consumpToDate$Consumption)*100),digits = 1),"%"), 
+             subtitle = "from renewable sources",
+             color = "green", icon = icon("leaf"), size = "tiny"
+             
+             
+    )
+    
+  })
+  
+  output$tradProp <- renderInfoBox({
+    consumpToDate <- subset(consump_data, Year == input$MaxYear)
+    TradConsumpToDate <- subset(TradConsumpToDate, Year == input$MaxYear)
+    valueBox(value = paste0(round((sum(TradConsumpToDate$Consumption)/sum(consumpToDate$Consumption)*100),digits = 1),"%"), 
+             subtitle = "from fossil fuels",
+             color = "red", icon = shiny::icon("gas-pump"), size = "tiny"
+             
+             
+    )
+    
+  })
+  
+  output$nuclProp <- renderInfoBox({
+    consumpToDate <- subset(consump_data, Year == input$MaxYear)
+    NuclConsumpToDate <- subset(NuclConsumpToDate, Year == input$MaxYear)
+    valueBox(value = paste0(round((sum(NuclConsumpToDate$Consumption)/sum(consumpToDate$Consumption)*100),digits = 1),"%"), 
+             subtitle = "from nuclear",
+             color = "lime", icon = shiny::icon("radiation-alt", lib = "font-awesome"), size = "tiny"
+             
+    )
+    
+  })
+
 }
