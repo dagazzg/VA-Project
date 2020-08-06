@@ -48,9 +48,8 @@ ui <- dashboardPage(
   dashboardHeader(title = "BP World Energy Survey 2019", inverted = TRUE),
   dashboardSidebar(
     sidebarMenu(
-      menuItem(tabName = "overall", "All Energy Sources"),
-      menuItem(tabName = "renewables", "Renewable Energy"),
-      menuItem(tabName = "nonrenewables", "Non-renewable Energy")
+      menuItem(tabName = "overall", "Overall View"),
+      menuItem(tabName = "country", "Country View")
     )
   ),
   dashboardBody(
@@ -61,24 +60,22 @@ ui <- dashboardPage(
         div(style="width:1200px",
           fluidRow(
             div(style="display: inline-block; margin-top:20px; margin-right:20px",
-            selectInput('choice1', 'Time Factor', 
-                        choices =  c(`Month` = 'Month',
-                                     `Day of Week`='Day_of_Week',
-                                     `Time Group`='time_indicator',
-                                     `Holiday`='Holiday',
-                                     `Season`='Season'),
+            selectInput('energyType', 'Energy Type', 
+                        choices =  c(`All` = 'all',
+                                     `Renewable`='renewable',
+                                     `Non-renewable`='nonrenewable'),
                         multiple = FALSE),
             )
           ),
+          fluidRow(
+            box(
+              leafletOutput("choroplethMap")
+            )
+          )
         )
       ),
       tabItem(
-        tabName = "renewables",
-        div(
-        )
-      ),
-      tabItem(
-        tabName = "nonrenewables",
+        tabName = "country",
         div(style="display:inline-block",
           selectInput(
             inputId = 'ops_time_factor', label= 'Time Factor', 
@@ -88,7 +85,7 @@ ui <- dashboardPage(
                          "Holiday"='holiday',
                          "Season" ='season'),
             multiple = FALSE), 
-        ),
+        )
       )
     )
   ), theme = "cosmo"
