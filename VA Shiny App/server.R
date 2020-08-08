@@ -8,8 +8,6 @@ library(plotly)
 library(shiny)
 library(shiny.semantic)
 library(semantic.dashboard)
-library(ggplot2)
-library(ggridges)
 library(dplyr)
 library(magrittr)
 library(plotly)
@@ -21,8 +19,6 @@ library(data.table)
 library(rgeos)
 library(raster)
 library(rgdal)
-library(GISTools)
-library(xts)
 library(tidyr)
 library(colorRamps)
 
@@ -33,61 +29,118 @@ library(colorRamps)
 ###########################################################################################
 # Define server logic 
 server <- function(input, output, session) {
-  data <- fread('./data/Raw Consumption - EJ.csv')
+  rawdata <- fread('./data/Raw Consumption - EJ.csv')
+  mapCountry <- 'Algeria'
+  options(scipen=999)
   
   # Data Cleaning
-  data <- transform(data, Consumption = as.numeric(Consumption))
-  data$Consumption[is.na(data$Consumption)] <- 0
-  data$Country[data$Country == "China Hong Kong SAR"] <- "Hong Kong"
-  data$Country[data$Country == "Iran"] <- "Iran (Islamic Republic of)"
-  data$Country[data$Country == "Russian Federation"] <- "Russia"
-  data$Country[data$Country == "South Korea"] <- "Korea, Republic of"
-  data$Country[data$Country == "US"] <- "United States"
-  data$Country[data$Country == "Vietnam"] <- "Viet Nam"
+  rawdata <- transform(rawdata, Consumption = as.numeric(Consumption))
+  rawdata$Consumption[is.na(rawdata$Consumption)] <- 0
+  rawdata$Country[rawdata$Country == "China Hong Kong SAR"] <- "Hong Kong"
+  rawdata$Country[rawdata$Country == "Iran"] <- "Iran (Islamic Republic of)"
+  rawdata$Country[rawdata$Country == "Russian Federation"] <- "Russia"
+  rawdata$Country[rawdata$Country == "South Korea"] <- "Korea, Republic of"
+  rawdata$Country[rawdata$Country == "US"] <- "United States"
+  rawdata$Country[rawdata$Country == "Vietnam"] <- "Viet Nam"
+  rawdata$Category <- ifelse(rawdata$Type == "Hydroelectricity" | rawdata$Type == "Solar" | rawdata$Type == "Wind", "Renewable", "Nonrenewable" )
   
-  # Data Transformation
-  data$Category <- ifelse(data$Type == "Hydroelectricity" | data$Type == "Solar" | data$Type == "Wind", "Renewable", "Nonrenewable" )
-  map_data <- setDT(data)[,list(Consumption=sum(Consumption)), by = .(Country, Category), with = TRUE]
-  map_data2 <- spread(map_data, Category, Consumption )
-  map_data2$Total <- with(map_data2 , Renewable + Nonrenewable)
-  map_data2$Proportion <- with(map_data2, Renewable / Total)
-  
-  
-  # Load shape files
-  glob_area <- readOGR('./data/TM_WORLD_BORDERS-0.3/TM_WORLD_BORDERS-0.3.shp')
-  
-  # Map countries to geospatial data
-  shape.data <- glob_area@data
-  shape.data$id  <- as.numeric(1:nrow(shape.data))
-  names(shape.data)[names(shape.data) == "NAME"] <- "Country"
-  new.shape.data  <- merge(shape.data, map_data2, by = "Country", all.x = TRUE)
-  new.shape.data <- new.shape.data[order(new.shape.data$id,decreasing = FALSE),]
-  #new.shape.data$Consumption[is.na(new.shape.data$Consumption)] <- 0
-  glob_area@data <- new.shape.data
-  
-  #mypalette <- colorQuantile(palette="Reds", domain=map_data$Proportion, na.color="black", n = 10)
-  mypalette <- colorBin(palette=colorRamps::green2red(5), domain=glob_area@data$Proportion, na.color="darkgrey", 8, reverse = TRUE)
-  
-  # Render Choropleth map
-  output$choroplethMap <- renderLeaflet({
-    leaflet(glob_area) %>%
-      addMapPane(name = "maplabels", zIndex = 420) %>% 
-      addTiles() %>%
-      addProviderTiles("CartoDB.PositronOnlyLabels", 
-                       options = leafletOptions(pane = "maplabels")) %>%
-      addPolygons(
-        fillColor = ~mypalette(glob_area@data$Proportion),
-        weight = 2,
-        opacity = 1,
-        fillOpacity = 0.8,
-        color = 'grey'
-      ) %>%
-      leaflet::addLegend(pal = mypalette, values = glob_area@data$Proportion, title = "Proportion of renewable energy", position = "bottomleft")
-      
+  renderChoropleth <- reactive({
+    print(input$MaxYear)
+    data <- subset(rawdata, Year == input$MaxYear)
+    
+    # Data Transformation
+    map_data <- setDT(data)[,list(Consumption=sum(Consumption)), by = .(Country, Category), with = TRUE]
+    map_data2 <- spread(map_data, Category, Consumption )
+    map_data2$Total <- with(map_data2 , Renewable + Nonrenewable)
+    map_data2$Proportion <- with(map_data2, Renewable / Total)
+    
+    # Load shape files
+    glob_area <- readOGR('./data/TM_WORLD_BORDERS-0.3/TM_WORLD_BORDERS-0.3.shp')
+    
+    # Map countries to geospatial data
+    shape.data <- glob_area@data
+    shape.data$id  <- as.numeric(1:nrow(shape.data))
+    names(shape.data)[names(shape.data) == "NAME"] <- "Country"
+    new.shape.data <- merge(shape.data, map_data2, by = "Country", all.x = TRUE)
+    new.shape.data <- new.shape.data[order(new.shape.data$id,decreasing = FALSE),]
+    #new.shape.data$Consumption[is.na(new.shape.data$Consumption)] <- 0
+    glob_area@data <- new.shape.data
+    
+    #mypalette <- colorQuantile(palette="Reds", domain=map_data$Proportion, na.color="black", n = 10)
+    mypalette <- colorBin(palette=colorRamps::green2red(5), domain=glob_area@data$Proportion, na.color="darkgrey", 8, reverse = TRUE)
+    
+    #popups <- ()
+    
+    labels <- paste(
+      glob_area@data$Country, "<br />",
+      "Proportion of energy that is renewable: ", round(glob_area@data$Proportion * 100, 4), "%","<br/>", 
+      sep="") %>%
+      lapply(htmltools::HTML)
+    
+    # Render Choropleth map
+    choroplethMap <- leaflet(glob_area) %>%
+        addMapPane(name = "maplabels", zIndex = 420) %>% 
+        addTiles() %>%
+        setView(lat = 0, lng = 0, zoom = 1.5) %>%
+        addProviderTiles("CartoDB.PositronOnlyLabels", 
+                         options = leafletOptions(pane = "maplabels")) %>%
+        addPolygons(
+          layerId = glob_area@data$Country,
+          fillColor = ~mypalette(glob_area@data$Proportion),
+          weight = 2,
+          opacity = 1,
+          fillOpacity = 0.8,
+          color = 'grey',
+          label = labels
+          #popup = popups
+        ) %>%
+        leaflet::addLegend(pal = mypalette, values = glob_area@data$Proportion, title = "Proportion of renewable energy", position = "bottomleft")
+    return (choroplethMap)
   })
   
-  consump_data <- fread('./data/Raw Consumption - EJ.csv')
-
+  output$choroplethMap <- renderLeaflet(renderChoropleth())
+  
+  # ======================= #
+  #    floating pie chart   # filter and title by selected country, algeria is hardcoded now
+  # ======================= #
+  renderDonut <- function(country){
+    data <- subset(rawdata, Year == input$MaxYear)
+    donutChart<- data %>%
+      filter(Country == country) %>% select(Type, Consumption)%>%
+      plot_ly(labels = ~Type, 
+              values = ~Consumption,
+              sort = FALSE
+              ) %>%
+      add_pie(hole = 0.5) %>%
+      layout(title = list(
+              text = paste(country, "Energy Mix")
+             ),
+             showlegend = TRUE,
+             plot_bgcolor = '#aad3df',
+             paper_bgcolor= '#aad3df',
+             images = list(
+               list(source = base64enc::dataURI(file = paste("./data/Flags/", tolower(country), ".png", sep = "")),
+                    xref = "paper", yref = "paper",
+                    x = 0.275, y = 0.72,
+                    sizex = 0.45, sizey = 0.45,
+                    opacity = 1
+                    )
+               )
+             )
+    
+    return (donutChart)
+  }
+  output$donutChart <- renderPlotly(renderDonut("Algeria"))
+  
+  observeEvent(input$choroplethMap_shape_click, {
+    event <- input$choroplethMap_shape_click
+    mapCountry <- event$id
+    output$donutChart <- renderPlotly(renderDonut(mapCountry))
+  })
+  
+  
+  # Keystats
+  consump_data <- rawdata
   consumpToDate <- consump_data %>%
     filter(Year <= 2019)
   
@@ -100,47 +153,41 @@ server <- function(input, output, session) {
   NuclConsumpToDate <- consump_data %>%
     filter(Year <= 2019 & Classification == "Nuclear")
   
-  output$totalEnergy <- renderInfoBox({
+  output$totalEnergy <- renderValueBox({
     consumpToDate <- subset(consump_data, Year == input$MaxYear)
-    valueBox(value = paste0(ceiling(sum(consumpToDate$Consumption)), " EJ"), 
+    box <- valueBox(value = paste0(ceiling(sum(consumpToDate$Consumption)), " EJ"), 
              subtitle = "Global Consumption",
-             color = "yellow", icon = icon("bolt"), size = "tiny"
+             color = "yellow", icon = icon("bolt"), size = "small"
     )
+    return (box)
   })
   
-  output$cleanProp <- renderInfoBox({
-    consumpToDate <- subset(consump_data, Year == input$MaxYear)
+  output$cleanProp <- renderValueBox({
+    consumpToDate <- subset(consump_data, Year == input$MaxYear) 
     cleanConsumpToDate <- subset(cleanConsumpToDate, Year == input$MaxYear)
-    valueBox(value = paste0(round((sum(cleanConsumpToDate$Consumption)/sum(consumpToDate$Consumption)*100),digits = 1),"%"), 
+    return(valueBox(value = paste0(round((sum(cleanConsumpToDate$Consumption)/sum(consumpToDate$Consumption)*100),digits = 1),"%"), 
              subtitle = "from renewable sources",
-             color = "green", icon = icon("leaf"), size = "tiny"
-             
-             
-    )
-    
+             color = "green", icon = icon("leaf"), size = "small"
+    ))
   })
   
-  output$tradProp <- renderInfoBox({
+  output$tradProp <- renderValueBox({
     consumpToDate <- subset(consump_data, Year == input$MaxYear)
     TradConsumpToDate <- subset(TradConsumpToDate, Year == input$MaxYear)
     valueBox(value = paste0(round((sum(TradConsumpToDate$Consumption)/sum(consumpToDate$Consumption)*100),digits = 1),"%"), 
              subtitle = "from fossil fuels",
-             color = "red", icon = shiny::icon("gas-pump"), size = "tiny"
-             
-             
+             color = "red", icon = shiny::icon("gas-pump"), size = "small"
     )
-    
   })
-  
-  output$nuclProp <- renderInfoBox({
+ 
+  output$nuclProp <- renderValueBox({
     consumpToDate <- subset(consump_data, Year == input$MaxYear)
     NuclConsumpToDate <- subset(NuclConsumpToDate, Year == input$MaxYear)
     valueBox(value = paste0(round((sum(NuclConsumpToDate$Consumption)/sum(consumpToDate$Consumption)*100),digits = 1),"%"), 
              subtitle = "from nuclear",
-             color = "lime", icon = shiny::icon("radiation-alt", lib = "font-awesome"), size = "tiny"
+             color = "teal", icon = shiny::icon("radiation-alt", lib = "font-awesome"), size = "small"
              
     )
-    
   })
-
 }
+

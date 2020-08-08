@@ -15,8 +15,11 @@ usePackage<-function(p){
   require(p, character.only = TRUE)  
 }
 
+usePackage("plotly")
 usePackage("leaflet")
 usePackage("shiny")
+usePackage("shiny.semantic")
+usePackage("semantic.dashboard")
 usePackage("dplyr")
 usePackage("data.table")
 usePackage("sp")
@@ -25,11 +28,6 @@ usePackage("raster")
 usePackage("rgdal")
 usePackage("GISTools")
 usePackage("ShinyApp")
-usePackage("plotly")
-usePackage("shiny.semantic")
-usePackage("semantic.dashboard")
-usePackage("ggplot2")
-usePackage("ggridges")
 usePackage("lubridate")
 usePackage("dbplyr")
 usePackage("dygraphs")
@@ -53,6 +51,7 @@ ui <- dashboardPage(
     )
   ),
   dashboardBody(
+    h1("ISSS608 Visual Analytics and Applications"),
     tags$style(".pusher.container .ui.segment .ui.stackable.container.grid {margin:0px!important;}"),
     tabItems(
       selected = 1,
@@ -60,29 +59,39 @@ ui <- dashboardPage(
         tabName = "overall",
         div(style="width:100%",
           fluidRow(
-            div(style="display: inline-block; margin-top:25px; margin-right:20px; vertical-align:top; width:20%", valueBoxOutput('totalEnergy')),
-            div(style="display: inline-block; margin-top:25px; margin-right:20px; vertical-align:top; width:20%", valueBoxOutput('tradProp')),
-            div(style="display: inline-block; margin-top:25px; margin-right:20px; vertical-align:top; width:20%", valueBoxOutput('cleanProp')),
-            div(style="display: inline-block; margin-top:25px; margin-right:20px; vertical-align:top; width:20%", valueBoxOutput('nuclProp'))
+            tags$style(".ui.yellow.card {background: #fbbd08}"),
+            div(style="display: inline-block; margin-top:25px; margin-right:10px; vertical-align:top; width:23%", valueBoxOutput('totalEnergy')),
+            tags$style(".ui.red.card {background: #db2828}"),
+            div(style="display: inline-block; margin-top:25px; margin-right:10px; vertical-align:top; width:23%", valueBoxOutput('tradProp')),
+            tags$style(".ui.green.card {background: #21ba45}"),
+            div(style="display: inline-block; margin-top:25px; margin-right:10px; vertical-align:top; width:23%", valueBoxOutput('cleanProp')),
+            tags$style(".ui.teal.card {background: #00b5ad}"),
+            div(style="display: inline-block; margin-top:25px; margin-right:10px; vertical-align:top; width:23%", valueBoxOutput('nuclProp'))
             ),
+          br(),
           fluidRow(
-            div(style="display: inline-flex; margin-top:20px; margin-right:20px",
+            div(style="display: inline-flex; margin-top:20px;",
               sliderInput("MaxYear",
                           "Year",
                           min = 2000,
                           max = 2019,
                           value = 2019,
                           sep = "" ),
-              selectInput('energyType', 'Energy Type', 
-                          choices =  c(`All` = 'all',
-                                       `Renewable`='renewable',
-                                       `Non-renewable`='nonrenewable'),
-                          multiple = FALSE),
+              #selectInput('energyType', 'Energy Type', 
+              #            choices =  c(`All` = 'all',
+              #                         `Renewable`='renewable',
+              #                         `Non-renewable`='nonrenewable'),
+              #            multiple = FALSE),
             )
           ),
-          fluidRow(
-            box(
+          br(),
+          fluidRow(id = 'choromap',
+                   tags$style('#choromap { background-color: #aad3df; }'),
+            div(style="display: inline-block; margin-top:25px; margin-right:0px; vertical-align:top; width:60%",
               leafletOutput("choroplethMap")
+            ),
+            div(style="display: inline-block; margin-top:25px; margin-left:0px; vertical-align:top; width:37%",
+                plotlyOutput("donutChart")
             )
           )
         )
@@ -101,6 +110,6 @@ ui <- dashboardPage(
         )
       )
     )
-  ), theme = "cosmo",
+  ), theme = "material",
   suppress_bootstrap = TRUE
 )
