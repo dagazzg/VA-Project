@@ -1,0 +1,13 @@
+name: ISSS608_Group6_ShinyApp
+title: ISSS608_Group6_ShinyApp
+username:
+account: dagazz
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2669924
+bundleId: 3514976
+url: https://dagazz.shinyapps.io/ISSS608_Group6_ShinyApp/
+when: 1597390145.46247
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: test.nb.html|test.Rmd

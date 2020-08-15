@@ -1,0 +1,13 @@
+name: ISSS608_G2_Group6
+title: ISSS608_G2_Group6
+username:
+account: dagazz
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2669941
+bundleId: 3518602
+url: https://dagazz.shinyapps.io/ISSS608_G2_Group6/
+when: 1597471245.03759
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: .RData
